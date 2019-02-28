@@ -1,8 +1,7 @@
 <template>
   <div class="mathematics">
   <div class="text-center">
-    <h1>Reactive Calculator</h1>
-    <h2>VUE CLI</h2>
+    <h1>Vue Calculator</h1>
   </div>
 
   <div class="display7">
@@ -91,11 +90,11 @@
   <div class="text-center" id="calculatorBody">
 
   <div class="row" id='firstRow'>
-    <button class = "btn btn-danger" v-on:click="kick('AC')" id="allClear">AC</button>
+    <button class = "btn btn-danger" v-on:click="kick('MC')" id="memoryClear">MC</button>
     <button class = "btn btn-primary" v-on:click="kick('M+')" id="memoryPlus">M+</button>
     <button class = "btn btn-primary" v-on:click="kick('M-')" id="memoryMinus">M-</button>
     <button class = "btn btn-primary" v-on:click="kick('MR')" id="memoryReturn">MR</button>
-    <button class = "btn btn-danger" v-on:click="kick('MC')" id="memoryClear">MC</button>
+    <button class = "btn btn-danger" v-on:click="kick('BS')" id="backSpace">BS</button>
   </div>
 
   <div class="row">
@@ -123,7 +122,7 @@
   </div>
 
   <div class="row">
-    <button class = "btn btn-danger" v-on:click="kick('BS')" id="backSpace">BS</button>
+    <button class = "btn btn-danger" v-on:click="kick('AC')" id="allClear">AC</button>
     <button class = "btn btn-primary" v-on:click="kick('0')" id="zero">0</button>
     <button class = "btn btn-primary" v-on:click="kick('00')" id="doubleZero">00</button>
     <button class = "btn btn-primary" v-on:click="kick('.')" id="dot">.</button>
