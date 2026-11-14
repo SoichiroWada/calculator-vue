@@ -1,0 +1,51 @@
+name: Deploy merged PR to Firebase Hosting
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only merged PR jobs join the deployment queue.
+    concurrency:
+      group: firebase-hosting-production
+      cancel-in-progress: false
+    steps:
+      # This privileged trigger only builds merged master, never a PR head.
+      - name: Check out master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint -- --no-fix
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CALCULATOR_BF6C7 }}
+          projectId: calculator-bf6c7
+          channelId: live
