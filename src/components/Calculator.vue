@@ -1,872 +1,185 @@
 <template>
-  <div class="calculator">
-  <div class="text-center">
-    <h1>Vue Calculator</h1>
-  </div>
+  <main class="calculator-page">
+    <h1 class="sr-only">Calculator</h1>
+    <section class="calculator" aria-label="Calculator">
+      <div class="screen" aria-label="Three-line calculation display">
+        <div class="screen-status">
+          <span v-if="state.hasMemory" class="memory-status">{{ 'MEMORY : ' + memoryDisplay }}</span>
+          <span class="message" role="status">{{ state.message }}</span>
+        </div>
+        <div ref="history" id="output2" class="display-line history" aria-label="Expression history">{{ history }}</div>
+        <div ref="working" id="output1" class="display-line working" aria-label="Working expression">{{ working }}</div>
+        <output ref="result" id="output5" class="display-line result" aria-label="Result" aria-live="polite" aria-atomic="true">{{ result }}</output>
+      </div>
 
-  <div class="display7">
-    <div id="output7">{{ output7 }}</div>
-  </div>
-  <div class="display6">
-    <div id="output6">{{ output6 }}</div>
-  </div>
-  <div class="display3">
-    <div id="output3" v-bind:style="this.styleChangeArray3">{{ output3 }}</div>
-  </div>
-  <div class="display2">
-    <div id="output2" v-bind:style="this.styleChangeArray2">{{ output2 }}</div>
-  </div>
-  <div class="display1">
-    <div id="output1" v-bind:style="this.styleChangeArray1">{{ output1 }}</div>
-  </div>
-  <div class="display5">
-    <div id="output5" v-bind:style="this.styleChangeArray5">{{ output5 }}</div>
-  </div>
-
-  <div class="display4">
-    <div id="output4">
-      <input v-model="inputValue"
-      placeholder="INPUT BY KEYBOARD"
-      id="inputOrigin"
-      v-on:click="startingDisplay()"
-      v-on:focus="changeBackgroundColor()"
-      v-on:focusout="revertBackgroundColor()"
-      v-bind:style="this.styleChangeArray4"
-      v-on:keydown="keydown"
-      ></div>
-  </div>
-
-
-  <form id="radio-button">
-    <label class="radio-inline">
-      <input type="radio" id="calculator" value="CALCULATOR MODE" v-model="picked" v-on:click="radioSelect(0)">Calculator
-    </label>
-    <label class="radio-inline">
-      <input type="radio" id="mathematics" value="MATHEMATICS MODE" v-model="picked" v-on:click="radioSelect(1)">Mathematics
-    </label>
-    <div>{{ picked }}</div>
-  </form>
-
-  <div class="display8" v-bind:style="this.styleChangeArray8">
-    <div id="output8">
-      <span class="exp">{{ output8 }}</span>
-      <span class="exp">{{ output9 }}</span>
-      <span class="exp">{{ output10 }}</span>
-      <span class="exp">{{ output11 }}</span>
-      <span class="exp">{{ output12 }}</span>
-      <span class="exp">{{ output13 }}</span>
-    </div>
-  </div>
-
-  <div class="text-center" id="calculatorBody">
-
-  <div class="row" id='firstRow'>
-    <button class = "btn btn-danger" v-on:click="kick('MC')" id="memoryClear">MC</button>
-    <button class = "btn btn-primary" v-on:click="kick('M+')" id="memoryPlus">M+</button>
-    <button class = "btn btn-primary" v-on:click="kick('M-')" id="memoryMinus">M-</button>
-    <button class = "btn btn-primary" v-on:click="kick('MR')" id="memoryReturn">MR</button>
-    <button class = "btn btn-danger" v-on:click="kick('BS')" id="backSpace">BS</button>
-  </div>
-
-  <div class="row">
-    <button class = "btn btn-primary" v-on:click="kick('7')" id="7">7</button>
-    <button class = "btn btn-primary" v-on:click="kick('8')" id="8">8</button>
-    <button class = "btn btn-primary" v-on:click="kick('9')" id="9">9</button>
-    <button class = "btn btn-primary" v-on:click="kick('(')" id="openingBracket">(</button>
-    <button class = "btn btn-primary" v-on:click="kick(')')" id="closingBracket">)</button>
-  </div>
-
-  <div class="row">
-    <button class = "btn btn-primary" v-on:click="kick('4')" id="4">4</button>
-    <button class = "btn btn-primary" v-on:click="kick('5')" id="5">5</button>
-    <button class = "btn btn-primary" v-on:click="kick('6')" id="6">6</button>
-    <button class = "btn btn-primary" v-on:click="kick('*')" id="multiply">*</button>
-    <button class = "btn btn-primary" v-on:click="kick('/')" id="divide">/</button>
-  </div>
-
-  <div class="row">
-    <button class = "btn btn-primary" v-on:click="kick('1')" id="1">1</button>
-    <button class = "btn btn-primary" v-on:click="kick('2')" id="2">2</button>
-    <button class = "btn btn-primary" v-on:click="kick('3')" id="3">3</button>
-    <button class = "btn btn-primary" v-on:click="kick('+')" id="plus">+</button>
-    <button class = "btn btn-primary" v-on:click="kick('-')" id="minus">-</button>
-  </div>
-
-  <div class="row">
-    <button class = "btn btn-danger" v-on:click="kick('AC')" id="allClear">AC</button>
-    <button class = "btn btn-primary" v-on:click="kick('0')" id="zero">0</button>
-    <button class = "btn btn-primary" v-on:click="kick('00')" id="doubleZero">00</button>
-    <button class = "btn btn-primary" v-on:click="kick('.')" id="dot">.</button>
-    <button class = "btn btn-primary" v-on:click="kick('=')" id="evaluate">=</button>
-  </div>
-
-</div>
-</div>
+      <div class="key-deck">
+        <div class="utility-panel">
+          <div class="memory-keys" aria-label="Memory and editing controls">
+            <calculator-key v-for="key in memoryKeys" :key="key.label" :key-info="key" @press="press" />
+          </div>
+          <fieldset class="mode-control" aria-describedby="mode-help">
+            <legend>{{ mode === 'calculator' ? 'CALCULATOR MODE' : 'MATHEMATICS MODE' }}</legend>
+            <div class="mode-options">
+              <label><input type="radio" name="mode" value="calculator" :checked="mode === 'calculator'" @change="setMode('calculator')"> Calculator</label>
+              <label><input type="radio" name="mode" value="mathematics" :checked="mode === 'mathematics'" @change="setMode('mathematics')"> Mathematics</label>
+            </div>
+            <button id="mode-help" type="button" class="mode-shortcut" aria-keyshortcuts="Alt" title="Press and release Alt to switch calculation mode" @click="toggleMode">Alt to switch</button>
+            <span class="sr-only">Calculator evaluates sequentially. Mathematics uses multiplication and division before addition and subtraction.</span>
+          </fieldset>
+        </div>
+        <div class="number-keys" aria-label="Numbers and operators">
+          <calculator-key v-for="key in numberKeys" :key="key.label" :key-info="key" @press="press" />
+        </div>
+      </div>
+      <p class="keyboard-hint">Keyboard ready <span aria-hidden="true">·</span> Hover over a key for its shortcut</p>
+    </section>
+  </main>
 </template>
 
 <script>
+import CalculatorKey from './CalculatorKey.vue'
+import { applyAction, createState, formatNumber, inspectExpression } from '../calculator/engine.mjs'
+import { createKeyboardController } from '../calculator/keyboard.mjs'
+
+const memoryKeys = [
+  { label: 'MC', shortcut: 'Home', description: 'Clear memory', danger: true },
+  { label: 'M+', shortcut: 'PageUp', description: 'Add the current result to memory' },
+  { label: 'M-', shortcut: 'PageDown', description: 'Subtract the current result from memory' },
+  { label: 'MR', shortcut: 'End', description: 'Recall memory' },
+  { label: 'BS', shortcut: 'Backspace / Delete', ariaShortcut: 'Backspace Delete', description: 'Delete the last character', danger: true }
+]
+const numberKeys = ['7', '8', '9', '(', ')', '4', '5', '6', '*', '/', '1', '2', '3', '+', '-', 'AC', '0', '00', '.', '='].map(label => {
+  const assignments = {
+    '(': ['←', 'ArrowLeft', 'Open parenthesis'],
+    ')': ['→', 'ArrowRight', 'Close parenthesis'],
+    AC: ['Space bar', 'Space', 'Clear the calculation; keep memory'],
+    '00': ['Ctrl', 'Control', 'Enter two zeros (press and release Ctrl)'],
+    '=': ['Enter', 'Enter', 'Calculate the result']
+  }
+  const assignment = assignments[label] || [label, label, label === '.' ? 'Decimal point' : 'Enter ' + label]
+  return { label, shortcut: assignment[0], ariaShortcut: assignment[1], description: assignment[2], danger: label === 'AC' }
+})
+
 export default {
   name: 'Calculator',
-  data: function(){
-              return {
-                inputValue:null,
-                picked:"CALCULATOR MODE",
-                output1:null,
-                output2:null,
-                output3:null,
-                output4:null,
-                output5:null,
-                output6:null,
-                output7:null,
-                output8:null,
-                output9:null,
-                output10:null,
-                output11:null,
-                output12:null,
-                output13:null,
-                styleChangeArray1:[], //style change for output1
-                styleChangeArray2:[], //style change for output2
-                styleChangeArray3:[], //style change for output3
-                styleChangeArray4:[], //style change for output4
-                styleChangeArray5:[], //style change for output5
-                styleChangeArray8:[], //style change for output8
-                quickSolverIndex:0,//number:0 is for has not got operator
-                inputArray1:[], //input is calculated when operator-key is pushed
-                inputArray2:[], //input history
-                inputArray3:[], //input history during inputting single numbers;
-                inputArray4:[], //input history with parenthesis
-                inputArray5:[], //input history with parenthesis
-                outerText: null,
-                realtimeArray:[], // based on the realtimeScanner, operator:1, number:0;
-                calculationMode:0, //0 is dentaku mode;
-                memoryArray:[],
-                inputString1:"",
-                inputString2:"",
-                inputString3:"",
-                inputString4:"",
-                inputString5:"",
-                memoryString:"",
-                operators5:["+", "-", "/", "*", "="],
-                operators4:["+", "-", "/", "*"],
-                operators3:["+", "/", "*"],
-                operatorsPlus:["+", "-"],
-                operatorsDivi:["/", "*"],
-                decimalPoint:["."],
-                numbersTextArray:["00", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "."],
-                numbersTextArrayforQ:["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",")"],
-                numbersTextArrayExDot:["00", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
-                numbersTextArrayOneNine:["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-                numbers:[0,1,2,3,4,5,6,7,8,9],
-                numbersEx0:[1,2,3,4,5,6,7,8,9],
-                zeroArray:["0", "00"],
-                situation045:[0,4,5],
-                situation167:[1,6,7],
-                situation014567:[0,1,4,5,6,7],
-                betweenBrackets:[4,6],
-                theendofBrackets:[5,7],
-                situation0157:[0,1,5,7]
-              }
-    },
-
-  methods: {
-    keydown(event){
-      if (event.keyCode === 229) {
-        this.output6 = "カナ漢字変換をOFFにしてください";
-        this.output7 = "Please turn off Kana Kanji Converter";
-      }
-      else if (event.keyCode !== 229){
-        if ( event.key === '1' ) { this.kick('1') }
-        else if ( event.key === '2' ) { this.kick('2') }
-        else if ( event.key === '3' ) { this.kick('3') }
-        else if ( event.key === '4' ) { this.kick('4') }
-        else if ( event.key === '5' ) { this.kick('5') }
-        else if ( event.key === '6' ) { this.kick('6') }
-        else if ( event.key === '7' ) { this.kick('7') }
-        else if ( event.key === '8' ) { this.kick('8') }
-        else if ( event.key === '9' ) { this.kick('9') }
-        else if ( event.key === '0' ) { this.kick('0') }
-        else if ( event.key === '.' ) { this.kick('.') }
-        else if ( event.key === '+' ) { this.kick('+') }
-        else if ( event.key === '-' ) { this.kick('-') }
-        else if ( event.key === '*' ) { this.kick('*') }
-        else if ( event.key === '/' ) { this.kick('/') }
-        else if ( event.key === '(' ) { this.kick('(') }
-        else if ( event.key === ')' ) { this.kick(')') }
-        else if ( event.key === 'Enter' ) { this.kick('=') }
-        else if ( event.key === 'Delete' ) { this.kick('AC') }
-        else if ( event.key === 'Control' ) { this.kick('AC') }
-        else if ( event.key === 'ArrowLeft' ) { this.kick('M+') }
-        else if ( event.key === 'ArrowDown' ) { this.kick('M-') }
-        else if ( event.key === 'ArrowRight' ) { this.kick('MR') }
-        else if ( event.key === 'Escape' ) { this.kick('MC') }
-        else if ( event.key === 'Backspace' ) { this.kick('BS') }
-      }
-    },
-
-    kick(input){
-      switch (true) {
-        case this.numbersTextArrayOneNine.includes(input):
-          this.numbersOperation(input);
-          this.clearValue();
-          break;
-        case input === "0":
-          this.zeroOperation(input);
-          this.clearValue();
-          break;
-        case input === "00":
-          this.zeroOperation(input);
-          this.clearValue();
-          break;
-        case input === "=":
-          this.equalOperator(input);
-          this.clearValue();
-          break;
-        case input === "+":
-          this.operatorsInput(input);
-          this.clearValue();
-          break;
-        case input === "-":
-          this.operatorsInput(input);
-          this.clearValue();
-          break;
-        case input === "/":
-          this.operatorsInput(input);
-          this.clearValue();
-          break;
-        case input === "*":
-          this.operatorsInput(input);
-          this.clearValue();
-          break;
-        case input === ".":
-          this.decimalOperation(input);
-          this.clearValue();
-          break;
-        case input === "AC":
-          this.allClear();
-          this.clearValue();
-          break;
-        case input === "(":
-          this.bracketsOperation(input);
-          this.clearValue();
-          break;
-        case input === ")":
-          this.bracketsOperation(input);
-          this.clearValue();
-          break;
-        case input === "BS":
-          this.backSpaceEdit(input);
-          this.clearValue();
-          break;
-        case input === "M+":
-          this.memoryButton(input);
-          this.clearValue();
-          break;
-        case input === "M-":
-          this.memoryButton(input);
-          this.clearValue();
-          break;
-        case input === "MR":
-          this.memoryReturn();
-          this.clearValue();
-          break;
-        case input === "MC":
-          this.memoryClear();
-          this.clearValue();
-          break;
-        default:
-          this.clearValue();
-      }
-    },
-    quickSolver() {
-      var tempValue = "";
-      var str = "";
-
-      if (this.quickSolverIndex === 1) {
-        if (this.numbersTextArrayforQ.includes(this.inputArray1[this.inputArray1.length-1])
-           && this.situation0157.includes(this.realtimeArray[this.realtimeArray.length - 1])){
-          this.inputString1 = this.inputArray1.join("");
-          tempValue = eval(this.inputString1);
-
-          var digitsAfterDecimal = this.consecutionAnalyser(tempValue);
-          var digitsAfterDecimalR = digitsAfterDecimal - 1;
-
-          var totalValueRounded = 0;
-          if (digitsAfterDecimal > 12) {
-            totalValueRounded = Math.round(tempValue * Math.pow(10,12))/Math.pow(10,12);
-          }
-          else if (digitsAfterDecimal > 0) {
-            totalValueRounded = Math.round(tempValue * Math.pow(10,digitsAfterDecimalR))/Math.pow(10,digitsAfterDecimalR);
-          }
-          else {
-            totalValueRounded = Math.round(tempValue * Math.pow(10,12))/Math.pow(10,12)
-          }
-
-          typeof totalValueRounded === "string" ? str = totalValueRounded: str = totalValueRounded.toString(10);
-
-          var digitsCheckArray = str.split("");
-          12 < digitsCheckArray.length && digitsCheckArray.length < 19 ? this.styleChangeArray5.push({ fontSize:"2.2em"})
-          :18 < digitsCheckArray.length ? this.styleChangeArray5.push({ fontSize:"1.8em"})
-          :this.styleChangeArray5.push({ fontSize:"2.8em"});
-
-          this.output5 = totalValueRounded;
-        }
-      }
-    },
-    startingDisplay(){
-      this.output1 === null ? this.output1 = "0": undefined;
-      this.radioSelect(0);
-      this.styleChangeArray8.push({ display:"block"});
-      this.output7 = "YOU CAN USE YOUR KEYBOARD";
-      this.memoryArray.length > 0 ? this.output3 = "MEMORY : "+ this.memoryString : this.output3 = "";
-      this.output8 = 'You can use below keys on keyboard';
-      this.output9 = 'Numbers: 0-9, Dot, Operators: +, -, *, /';
-      this.output10 = 'Ctrl: AllClear, Enter: =, Backspace: BS';
-      this.output11 = 'LEFT:M+, DOWN:M-, RIGHT:MR, ESC:MC';
-    },
-    changeBackgroundColor(){
-      this.styleChangeArray4.push({ backgroundColor:'#003a6d'});
-    },
-    revertBackgroundColor(){
-      this.styleChangeArray4.push({ backgroundColor:'gray'});
-      this.styleChangeArray8.push({ display:"none"});
-    },
-    clearValue(){
-      this.inputValue = null;
-    },
-    memoryClear(){
-      this.memoryArray = [];
-      this.memoryString = "";
-      this.output7 = "MEMORY CLEARED !";
-      this.displayNew();
-    },
-    allClear(){
-      this.inputArray1 = [];
-      this.inputArray2 = [];
-      this.inputArray3 = [];
-      this.inputArray4 = [];
-      this.inputString1 = "";
-      this.inputString2 = "";
-      this.inputString3 = "";
-      this.inputString4 = "";
-      this.output5 = "";
-      this.output4 = "";
-      this.memoryArray.length > 0 ? this.output3 = "MEMORY : "+ this.memoryString : this.output3 = "";
-      this.output2 = "";
-      this.output1 = "";
-      this.styleChangeArray2.push({ fontSize:"1.4em"});
-      this.styleChangeArray1.push({ fontSize:"2.8em"});
-      this.output1 = "0";
-      this.quickSolverIndex = 0;
-      this.output7 = "IN CALCULATOR MODE";
-      this.output6 = "ALL CREARED";
-      this.operatorsInputAccumulator = 0;
-    },
-
-    displayNew() {
-      this.inputString1 = this.inputArray1.join("");
-      this.inputString2 = this.inputArray2.join("");
-      this.memoryString = this.memoryArray.join("");
-
-      this.realtimeScanner();
-      this.bracketsGen();
-      this.inputString4 = this.inputArray4.join("");
-
-      var digitsCheckArray1 = this.inputString1.split("");
-      var digitsCheckArray2 = this.inputString2.split("");
-
-      12 < digitsCheckArray1.length && digitsCheckArray1.length < 19 ? this.styleChangeArray1.push({ fontSize:"2.2em"})
-      :18 < digitsCheckArray1.length ? this.styleChangeArray1.push({ fontSize:"1.8em"})
-      :this.styleChangeArray1.push({ fontSize:"2.8em"});
-
-      24 < digitsCheckArray2.length && digitsCheckArray2.length < 31 ? this.styleChangeArray2.push({ fontSize:"1.2em"})
-      :30 < digitsCheckArray2.length ? this.styleChangeArray2.push({ fontSize:"1.0em"})
-      :this.styleChangeArray2.push({ fontSize:"1.4em"})
-
-      this.memoryArray.length > 0 ? this.output3 = "MEMORY : "+ this.memoryString : this.output3 = "";
-
-      this.output1 = this.inputString1;
-      this.output2 = this.inputString4;
-    },
-
-    consecutionAnalyser (totalValue) {
-      var totalArray = [];
-      var consArray = [];
-      var indexDot = 0;
-      var digitsAfterDecimal = 0;
-      totalArray = totalValue.toString(10).split("");
-      // console.log('totalArray:', totalArray)
-        for (var i = 0; i < totalArray.length; i++) {
-          if (totalArray[i] === '0' || totalArray[i] === '.') {
-            consArray.push(totalArray[i]);
-            if (consArray.length > 8) {
-              indexDot = consArray.indexOf('.');
-              digitsAfterDecimal = consArray.length - indexDot - 1; //number of digits after decimal point
-              // console.log('digitsAfterDecimal-0:', digitsAfterDecimal)
-              // console.log('consArray:', consArray )
-              return digitsAfterDecimal;
-            }
-          }
-          else if (totalArray[i] !== '0' && totalArray[i] !== '.') {
-            consArray = [];
-          }
-        }
-        for (var k = 0; k < totalArray.length; k++) {
-          if (totalArray[k] === '9' || totalArray[k] === '.') {
-            consArray.push(totalArray[k]);
-            if (consArray.length > 8) {
-              indexDot = consArray.indexOf('.');
-              digitsAfterDecimal = consArray.length - indexDot - 1; //number of digits after decimal point
-              // console.log('digitsAfterDecimal-9:', digitsAfterDecimal)
-              // console.log('consArray:', consArray )
-              return digitsAfterDecimal;
-            }
-          }
-          else if (totalArray[k] !== '9' && totalArray[k] !== '.') {
-            consArray = [];
-          }
-        }
-      return digitsAfterDecimal;
-    },
-
-      /*calculation when push "=" button*/
-    calcAll() {
-        this.inputString1 = this.inputArray1.join("");
-        var totalValue = eval(this.inputString1);
-        // console.log('totalValue:', totalValue);
-        this.inputArray1 = [];
-        var digitsAfterDecimal = this.consecutionAnalyser(totalValue);
-        // console.log('digitsAfterDecimal:', digitsAfterDecimal);
-        var digitsAfterDecimalR = digitsAfterDecimal - 1;
-        // console.log('digitsAfterDecimalR:', digitsAfterDecimalR);
-
-        var totalValueRounded = 0;
-        if (digitsAfterDecimal > 12) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12);
-        }
-        else if (digitsAfterDecimal > 0) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,digitsAfterDecimalR))/Math.pow(10,digitsAfterDecimalR);
-        }
-        else {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12)
-        }
-
-        this.inputArray1.push(totalValueRounded);
-        this.inputArray2.push("=");
-        this.inputArray3 = [];
-        this.displayNew();
-    },
-      /*calculation when push the button on operators*/
-    calcMid(input) {
-        this.inputString1 = this.inputArray1.join("");
-        var totalValue = eval(this.inputString1);
-        this.inputArray1 = [];
-        var digitsAfterDecimal = this.consecutionAnalyser(totalValue);
-        var digitsAfterDecimalR = digitsAfterDecimal - 1;
-        // console.log('digitsAfterDecimal:', digitsAfterDecimal);
-        var totalValueRounded = 0;
-        if (digitsAfterDecimal > 12) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12);
-        }
-        else if (digitsAfterDecimal > 0) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,digitsAfterDecimalR))/Math.pow(10,digitsAfterDecimalR);
-        }
-        else {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12)
-        }
-        this.inputArray1.push(totalValueRounded);
-        this.inputArray1.push(input);
-        this.inputArray3 = [];
-        this.displayNew();
-    },
-    bracketsGen() {
-      this.inputArray4 = [];
-      for ( var k = 0; k < this.inputArray2.length; k++ ){
-        if (this.situation014567.includes(this.realtimeArray[k])) {
-          this.inputArray4.push(this.inputArray2[k]);
-        }
-        else if (this.realtimeArray[k] === 9) {
-          this.inputArray4.push(")", this.inputArray2[k]);
-          this.inputArray4.unshift("(");
-        }
-        else if (this.realtimeArray[k] === 8) {
-          this.inputArray4.push("=");
-        }
-      }
-    },
-    realtimeScanner() {
-        this.realtimeArray = [];
-        for (var i = 0; i < this.inputArray2.length; i++) {
-          if (i === 0 && this.inputArray2[0] === "-") {
-              this.realtimeArray.push(0);  //ignore this minus because this is not operator, but indicator
-            } else if (i === 0 && this.inputArray2[i] === "(") {
-              this.realtimeArray.push(4);
-            } else if (i === 0 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(0);
-
-            } else if (i > 0 && this.realtimeArray[i-1] === 0 && this.inputArray2[i] === "(") {
-              this.realtimeArray.push(4);  //ignore this minus because this is not operator, but indicator
-            } else if (i > 0 && this.realtimeArray[i-1] === 4 && this.inputArray2[i-1] === "(" && this.inputArray2[i] === "-") {
-              this.realtimeArray.push(4);  //ignore this minus because this is not operator, but indicator
-            } else if (i > 0 && this.realtimeArray[i-1] === 4 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(4);
-            } else if (i > 0 && this.realtimeArray[i-1] === 4 && this.operators4.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(4);
-            } else if (i > 0 && this.realtimeArray[i-1] === 4 && this.inputArray2[i] === ")") {
-              this.realtimeArray.push(5);
-
-            } else if (i > 0 && this.realtimeArray[i-1] === 1 && this.inputArray2[i] === "(") {
-              this.realtimeArray.push(6);  //ignore this minus because this is not operator, but indicator
-            } else if (i > 0 && this.realtimeArray[i-1] === 6 && this.inputArray2[i-1] === "(" && this.inputArray2[i] === "-") {
-              this.realtimeArray.push(6);  //ignore this minus because this is not operator, but indicator
-            } else if (i > 0 && this.realtimeArray[i-1] === 6 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(6);
-            } else if (i > 0 && this.realtimeArray[i-1] === 6 && this.operators4.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(6);
-            } else if (i > 0 && this.realtimeArray[i-1] === 6 && this.inputArray2[i] === ")") {
-              this.realtimeArray.push(7);
-
-            } else if (i > 0 && this.operatorsPlus.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(1);
-
-            } else if (i > 0 && this.situation167.includes(this.realtimeArray[i-1]) && this.operatorsDivi.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(9);
-            } else if (i > 0 && this.situation045.includes(this.realtimeArray[i-1]) && this.operatorsDivi.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(0);
-
-            } else if (i > 0 && this.realtimeArray[i-1] === 0 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(0);
-            } else if (i > 0 && this.realtimeArray[i-1] === 1 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(1);
-            } else if (i > 0 && this.realtimeArray[i-1] === 9 && this.numbersTextArray.includes(this.inputArray2[i])) {
-              this.realtimeArray.push(0);
-            } else if (i > 0 && this.realtimeArray[i-1] === 9 && this.inputArray2[i] === "(") {
-              this.realtimeArray.push(4);
-
-            } else if (this.inputArray2[i] === "=") {
-              this.realtimeArray.push(8);
-            }
-          }
-      },
-    numbersOperation(input) {
-      if (this.inputArray2[this.inputArray2.length-1] === "=" && this.numbersTextArray.includes(input)) {
-        this.inputArray1 = [];
-        this.inputArray2 = [];
-        this.inputArray3 = [];
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-        this.inputArray3.push(input);
-      }
-      else if (this.inputArray3[0] === "0" && this.inputArray3[1] === undefined && input !== "." ) {
-        this.output6 = "Not allowed to enter 0 as starting number";
-        this.inputArray1.pop();
-        this.inputArray2.pop();
-        this.inputArray3.pop();
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-        this.inputArray3.push(input);
-      }
-      else {
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-        this.inputArray3.push(input);
-      }
-      this.displayNew();
-      this.quickSolver();
-      this.output7 = "";
-      this.output6 = "";
-    },
-
-    operatorsInput(input) {
-      if (this.inputArray2.length === 0 && input === "-") {
-          this.inputArray1.push(input);
-          this.inputArray2.push(input);
-          this.inputArray3.push(input); //this is not operator
-      }
-      else if (this.inputArray2.length === 0 && input !== "-") {
-          this.output6 = "invalid input";
-      }
-      else if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length - 1]) && this.numbersTextArray.includes(this.inputArray2[this.inputArray2.length - 1])) {
-          this.inputArray1.push(input);
-          this.inputArray2.push(input);
-          this.inputArray3 = [];
-      }
-      else if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length - 1]) && this.operators4.includes(this.inputArray2[this.inputArray2.length - 1])) {
-          this.inputArray1.pop();
-          this.inputArray2.pop();
-          this.inputArray1.push(input);
-          this.inputArray2.push(input);
-          this.inputArray3 = [];
-      }
-      else if (this.inputArray2[this.inputArray2.length - 1] === "(" && input === "-") {
-          this.inputArray1.push(input);
-          this.inputArray2.push(input);
-          this.inputArray3.push(input); //this is not operator
-      }
-      else if (this.inputArray2[this.inputArray2.length - 1] === "(" && this.operators3.includes(input)) {
-          this.output6 = "invalid input";
-      }
-      else if (this.operators4.includes(this.inputArray2[this.inputArray2.length - 1]) && this.inputArray2.length > 1) {
-          this.inputArray1.pop(); //this is reassignment of operator;
-          this.inputArray2.pop(); //no need to pop for inputArray3;
-          this.inputArray2.push(input);
-          this.calcMid(input);
-      }
-      else if (this.inputArray2[this.inputArray2.length - 1] === ")" ) {
-          this.inputArray2.push(input);
-          this.calcMid(input);
-      }
-      else if (this.inputArray2[this.inputArray2.length - 1] === "=") {
-          this.inputArray2.pop();
-          this.inputArray2.push(input);
-          this.calcMid(input);
-      }
-      else {
-          this.inputArray2.push(input);
-          this.calcMid(input);
-      }
-      this.displayNew();
-      input="-" && this.inputArray2.length === 1 ? this.quickSolverIndex = 0:
-      input="+" && this.inputArray2.length === 0 ? this.quickSolverIndex = 0:
-      input="*" && this.inputArray2.length === 0 ? this.quickSolverIndex = 0:
-      input="/" && this.inputArray2.length === 0 ? this.quickSolverIndex = 0:
-      this.quickSolverIndex = 1;
-    },
-
-    //This function is only for Dentaku
-    backSpaceEdit() {
-      if (this.numbersTextArray.includes(this.inputArray2[this.inputArray2.length-1])){
-        this.inputArray1.pop();
-        this.inputArray2.pop();
-        this.inputArray3.pop();
-        this.displayNew();
-        this.quickSolver();
-      }
-      else {
-        this.output7 = "Only digits can be deleted with BS";
-        this.output6 = "The operator can be switched to another";
-      }
-    },
-    //zeroOperation is available for both
-    zeroOperation(input) {
-      if (this.inputArray2[this.inputArray2.length-1] === "=" ) {
-        this.inputArray1 = [];
-        this.inputArray2 = [];
-        this.inputArray3 = [];
-        this.inputArray1.push("0");
-        this.inputArray2.push("0");
-        this.inputArray3.push("0");
-      }
-      else if (this.inputArray3[0] === "0" && this.inputArray3[1] === undefined && input === "0" ) {
-        this.output6 = "not allowed to enter 00";
-      }
-      else if (this.inputArray3[0] === "0" && this.inputArray3[1] === undefined && input === "00" ) {
-        this.output6 = "not allowed to enter 00";
-      }
-      else if (this.inputArray3[0] === undefined && input === "00" ) {
-        this.output6 = "not allowed to enter 00";
-        this.inputArray1.push("0");
-        this.inputArray2.push("0");
-        this.inputArray3.push("0");
-      }
-      else {
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-        this.inputArray3.push(input);
-      }
-      this.displayNew();
-      this.quickSolver();
-    },
-
-  //function decimalOperation is available for both
-    decimalOperation (input) {
-      if (this.inputArray3.includes(".")) {
-        this.output6 = "Duplicated '.'";
-      }
-      else if(this.inputArray2.length === 0){
-        this.inputArray1.push("0", ".");
-        this.inputArray2.push("0", ".");
-        this.inputArray3.push("0", ".");
-      }
-      else if (this.inputArray2[this.inputArray2.length-1] === "=") {
-        this.inputArray1 = [];
-        this.inputArray2 = [];
-        this.inputArray3 = [];
-        this.inputArray1.push("0", ".");
-        this.inputArray2.push("0", ".");
-        this.inputArray3.push("0", ".");
-      }
-      else if (this.operators4.includes(this.inputArray2[this.inputArray2.length-1])) {
-        this.inputArray1.push("0", ".");
-        this.inputArray2.push("0", ".");
-        this.inputArray3.push("0", ".");
-      }
-      else if (this.inputArray2[this.inputArray2.length-1] === "(") {
-        this.inputArray1.push("0", ".");
-        this.inputArray2.push("0", ".");
-        this.inputArray3.push("0", ".");
-      }
-      else if (this.inputArray2[this.inputArray2.length-1] === ")") {
-        this.output6 = "invalid input";
-      }
-      else if(input === "."){
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-        this.inputArray3.push(input);
-      }
-      this.displayNew();
-      this.quickSolver();
-    },
-
-    equalOperator () {
-      if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length-1])) {
-        this.output6 = "invalid input";
-      }
-      else if (this.operators4.includes(this.inputArray2[this.inputArray2.length-1])) {
-        this.output6 = "invalid input";
-      }
-      else if (this.inputArray2[this.inputArray2.length-1] === "=") {
-        this.output6 = "invalid input";
-      }
-      else if (this.inputArray2.length === 0) {
-        this.output6 = "invalid input";
-      }
-      else {
-        this.calcAll();
-        this.quickSolverIndex = 0;
-      }
-    },
-
-    bracketsOperation(input) {
-      if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length-1]) && input === "(") {
-        this.output6 = "invalid input";
-      }
-      else if (this.operators4.includes(this.inputArray2[this.inputArray2.length-1]) && input === "(") {
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-      }
-      else if (this.inputArray2.length === 0 && input === "(") {
-        this.inputArray1.push(input);
-        this.inputArray2.push(input);
-      }
-      else if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length-1])
-              && this.operators4.includes(this.inputArray2[this.inputArray2.length-1])
-              && input === ")") {
-        this.output6 = "invalid input";
-      }
-      else if (this.betweenBrackets.includes(this.realtimeArray[this.realtimeArray.length-1]) && input === ")") {
-          this.inputArray1.push(input);
-          this.inputArray2.push(input);
-      }
-      else if (this.inputArray2[this.inputArray2.length-1] === "(" && input === ")") {
-          this.output6 = "invalid input";
-      }
-      else {
-          this.output6 = "invalid input";
-      }
-      this.displayNew();
-      this.quickSolver();
-    },
-    memoryButton(input) {
-      if (this.memoryArray.length > 0){
-        this.output7 = "PRIOR MEMORY DATA IS EXISTING";
-        return;
-      }
-      else if (this.memoryArray.length === 0 && this.inputArray2.length === 0){
-        this.output7 = "NO DATA IS STORED";
-        return;
-      }
-      else if (this.memoryArray.length === 0 && this.inputArray2.length === 1 && this.inputArray2[0] === "-"){
-        this.output7 = "NO DATA IS STORED";
-        return;
-      }
-      else if (this.memoryArray.length === 0 && this.operators4.includes(this.inputArray2[this.inputArray2.length-1])){
-        this.output7 = "INVALID INPUT!";
-        return;
-      }
-      else if (this.memoryArray.length === 0) {
-        this.inputString1 = this.inputArray1.join("");
-        var totalValue = eval(this.inputString1);
-        this.inputArray1 = [];
-        var digitsAfterDecimal = this.consecutionAnalyser(totalValue);
-        var digitsAfterDecimalR = digitsAfterDecimal - 1;
-        var totalValueRounded = 0;
-        if (digitsAfterDecimal > 12) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12);
-        }
-        else if (digitsAfterDecimal > 0) {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,digitsAfterDecimalR))/Math.pow(10,digitsAfterDecimalR);
-        }
-        else {
-          totalValueRounded = Math.round(totalValue * Math.pow(10,12))/Math.pow(10,12)
-        }
-        this.inputArray1.push(totalValueRounded);
-        this.inputArray2[this.inputArray2.length - 1] !== "=" ? this.inputArray2.push("=") : undefined;
-        this.inputArray3 = [];
-        var result = totalValueRounded;
-
-        if (this.memoryArray.length === 0 && input === "M+") {
-            result = result.toString()
-            this.memoryArray = result.split("");
-            this.output7 = "DATA STORED BY M+";
-        }
-        else if (this.memoryArray.length === 0 && input === "M-") {
-            result = result.toString()
-            this.memoryArray = result.split("");
-            this.memoryArray.unshift("-");
-            this.output7 = "DATA STORED BY M-";
-        }
-      }
-      this.displayNew();
-    },
-    memoryReturn() {
-      this.output5 = ""; //quickSolver cannot provide an answer to memoryReturn operation
-      this.output6 = "";
-      this.output7 = "";
-      if ( this.memoryArray.length === 0 ) {
-        this.output7 = "NO MEMORY DATA";
-      }
-      else if ( this.operators4.includes(this.inputArray2[this.inputArray2.length - 1]) || this.inputArray2.length === 0 ) {
-        if (this.operators4.includes(this.inputArray2[this.inputArray2.length - 1]) && 0 <= Number(this.memoryString)) {
-            this.inputArray1 = [...this.inputArray1, ...this.memoryArray];
-            this.inputArray2 = [...this.inputArray2, ...this.memoryArray];
-            this.inputArray3 = [...this.inputArray3, ...this.memoryArray];
-          } else if (this.operators4.includes(this.inputArray2[this.inputArray2.length - 1]) && 0 > Number(this.memoryString)) {
-            this.inputArray1 = [...this.inputArray1, "(", ...this.memoryArray, ")"];
-            this.inputArray2 = [...this.inputArray2, "(", ...this.memoryArray, ")"];
-            this.inputArray3 = [...this.inputArray3, "(", ...this.memoryArray, ")"];
-          } else if (this.inputArray2.length === 0 && 0 <= Number(this.memoryString)) {
-            this.inputArray1 = [...this.inputArray1, ...this.memoryArray];
-            this.inputArray2 = [...this.inputArray2, ...this.memoryArray];
-            this.inputArray3 = [...this.inputArray3, ...this.memoryArray];
-          } else if (this.inputArray2.length === 0 && 0 > Number(this.memoryString)) {
-            this.inputArray1 = [...this.inputArray1, "(", ...this.memoryArray, ")"];
-            this.inputArray2 = [...this.inputArray2, "(", ...this.memoryArray, ")"];
-            this.inputArray3 = [...this.inputArray3, "(", ...this.memoryArray, ")"];
-          }
-      }
-      else {
-        this.output7 = "INVALID INPUT !"
-      }
-      this.displayNew();
-      this.memoryArray.length > 0 ? this.output7 = "MEMORY DATA RETRIEVED":undefined;
-    },
-    radioSelect(input){
-        if ( input === 0 ){
-            this.output7 = "CALCULATOR MODE";
-        }
-        else if ( input === 1 ){
-            this.$router.push({name:'Mathematics'});
-        }
-
-    },
-    key(event){
-      this.message = 'key ' + event.key + ' (' + event.keyCode + ')';
+  components: { CalculatorKey },
+  data() {
+    return { state: createState(), memoryKeys, numberKeys }
+  },
+  computed: {
+    mode() { return this.$route.name === 'Mathematics' ? 'mathematics' : 'calculator' },
+    inspection() { return inspectExpression(this.state.expression, this.mode) },
+    history() { return this.state.expression + (this.state.completed ? '=' : '') },
+    working() { return this.state.completed ? this.state.answer : this.inspection.working },
+    result() { return this.state.completed ? this.state.answer : this.inspection.result || (this.state.expression ? '' : '0') },
+    memoryDisplay() { return formatNumber(this.state.memory) }
+  },
+  watch: {
+    mode() {
+      this.state.completed = false
+      this.state.message = this.mode === 'calculator' ? 'Sequential calculation.' : 'Mathematical operator precedence.'
     }
+  },
+  mounted() {
+    this.keyboard = createKeyboardController(this.press, this.toggleMode)
+    window.addEventListener('keydown', this.keyboard.keydown)
+    window.addEventListener('keyup', this.keyboard.keyup)
+    window.addEventListener('blur', this.keyboard.blur)
+  },
+  updated() {
+    // Long expressions stay readable and keep the most recent input in view.
+    const displays = ['history', 'working', 'result']
+    displays.forEach(name => {
+      const element = this.$refs[name]
+      if (element) element.scrollLeft = element.scrollWidth
+    })
+  },
+  beforeDestroy() {
+    window.removeEventListener('keydown', this.keyboard.keydown)
+    window.removeEventListener('keyup', this.keyboard.keyup)
+    window.removeEventListener('blur', this.keyboard.blur)
+  },
+  methods: {
+    press(action) { applyAction(this.state, action, this.mode) },
+    setMode(mode) {
+      if (mode !== this.mode) this.$router.push({ name: mode === 'calculator' ? 'Calculator' : 'Mathematics' })
+    },
+    toggleMode() { this.setMode(this.mode === 'calculator' ? 'mathematics' : 'calculator') }
   }
 }
-
 </script>
 
-<style>
-
+<style scoped>
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.calculator-page { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 36px 24px; }
+.calculator { width: min(100%, 1030px); }
+.screen { background: #101010; color: #72d6c7; padding: 22px 30px 10px; margin-bottom: 36px; }
+.screen-status { min-height: 30px; display: flex; flex-direction: column; text-align: center; overflow-wrap: anywhere; }
+.display-line { display: block; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #3e6862 #101010; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1.5; }
+.screen-status, .history { font-size: 22px; line-height: 1.5; }
+.history { min-height: 36px; }
+.working, .result { font-size: 44px; line-height: 1.5; }
+.working, .result { min-height: 66px; }
+.result { margin-top: 4px; }
+.key-deck { background: #868282; display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; padding: 32px 34px 28px 38px; }
+.utility-panel { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-width: 0; }
+.memory-keys, .number-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.memory-keys { gap: 10px; }
+.number-keys { grid-template-rows: repeat(4, minmax(0, 1fr)); }
+.mode-control { align-self: flex-start; margin: 0 0 6px 6px; padding: 18px 22px 10px; background: #000; border: 0; color: #fff; font-size: 14px; text-align: center; }
+.mode-control legend { float: left; width: 100%; margin-bottom: 8px; padding: 0; }
+.mode-options { clear: both; display: flex; justify-content: center; gap: 9px; }
+.mode-options label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
+.mode-options input { margin: 0; accent-color: #43c6fa; }
+.mode-shortcut { display: block; margin: 8px auto 0; padding: 2px 4px; border: 0; background: none; color: #b6c5c3; font-size: 11px; cursor: pointer; }
+.keyboard-hint { color: #aaa; font-size: 12px; text-align: center; margin: 15px 0 0; }
+.keyboard-hint span { padding: 0 8px; }
+@media (max-width: 800px) {
+  .calculator-page { padding: 18px 20px; }
+  .screen { padding: 10px 18px 8px; margin-bottom: 20px; }
+  .screen-status { min-height: 22px; }
+  .screen-status, .history { font-size: 18px; }
+  .history { min-height: 27px; }
+  .working, .result { font-size: 32px; }
+  .working, .result { min-height: 48px; }
+  .key-deck { padding: 20px; gap: 28px; }
+  .memory-keys, .number-keys { gap: 8px; }
+  .mode-control { margin: 0; padding: 12px 10px 6px; font-size: 12px; }
+  .mode-options { gap: 6px; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .calculator-page { padding: 6px 18px; }
+  .calculator { max-width: 900px; }
+  .screen { padding: 2px 18px; margin-bottom: 10px; }
+  .screen-status { min-height: 14px; }
+  .screen-status, .history { font-size: 14px; }
+  .history { min-height: 20px; }
+  .working, .result { font-size: 23px; line-height: 1.3; }
+  .working, .result { min-height: 30px; }
+  .result { margin-top: 0; }
+  .key-deck { padding: 10px 20px; gap: 34px; }
+  .memory-keys, .number-keys { gap: 5px; }
+  .number-keys { grid-template-rows: repeat(4, 44px); }
+  .utility-panel { gap: 14px; }
+  .mode-control { padding: 10px 10px 5px; font-size: 12px; margin: 0; }
+  .mode-control legend { margin-bottom: 5px; }
+  .mode-shortcut { margin-top: 4px; }
+  .keyboard-hint { margin: 7px 0 0; font-size: 10px; }
+}
+@media (orientation: landscape) and (max-height: 340px) {
+  .screen { margin-bottom: 8px; }
+  .screen-status { min-height: 12px; }
+  .screen-status, .history { font-size: 12px; }
+  .history { min-height: 18px; }
+  .working, .result { font-size: 21px; line-height: 1.2; }
+  .working, .result { min-height: 26px; }
+  .keyboard-hint { display: none; }
+}
+@media (max-width: 540px) and (orientation: portrait) {
+  .calculator-page { padding: 20px 14px; }
+  .key-deck { grid-template-columns: 1fr; gap: 22px; padding: 20px; }
+  .utility-panel { gap: 18px; }
+  .mode-control { align-self: stretch; order: -1; }
+  .number-keys { grid-auto-rows: 58px; }
+}
 </style>
