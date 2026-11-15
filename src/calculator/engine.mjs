@@ -1,23 +1,36 @@
 // A small arithmetic parser: expressions never execute JavaScript.
+import Decimal from 'decimal.js'
+
 const OPERATORS = ['+', '-', '*', '/']
 const MAX_LENGTH = 512
+// An answer can contain 512 significant digits, a sign, point, and exponent.
+const MAX_EXPRESSION_LENGTH = MAX_LENGTH * 2 + 16
+// Keep input digits through arithmetic instead of converting them to binary floats.
+// Recurring quotients round at 512 significant digits; retain the existing range.
+const CalculatorDecimal = Decimal.clone({ precision: MAX_LENGTH, maxE: 308, minE: -324 })
+const MAX_VALUE = new CalculatorDecimal('1.7976931348623157e308')
+
+function inRange(value) {
+  return value.isFinite() && value.abs().lte(MAX_VALUE)
+}
 
 function formatNumber(value) {
-  if (!Number.isFinite(value)) throw new Error('Result is outside the supported range.')
-  return String(Number(value.toPrecision(14)))
+  const decimal = new CalculatorDecimal(value)
+  if (!inRange(decimal)) throw new Error('Result is outside the supported range.')
+  return decimal.toString()
 }
 
 function calculate(operator, left, right) {
-  if (operator === '/' && right === 0) throw new Error('Cannot divide by zero.')
-  const result = operator === '+' ? left + right
-    : operator === '-' ? left - right
-      : operator === '*' ? left * right : left / right
-  if (!Number.isFinite(result)) throw new Error('Result is outside the supported range.')
+  if (operator === '/' && right.isZero()) throw new Error('Cannot divide by zero.')
+  const result = operator === '+' ? left.plus(right)
+    : operator === '-' ? left.minus(right)
+      : operator === '*' ? left.times(right) : left.dividedBy(right)
+  if (!inRange(result)) throw new Error('Result is outside the supported range.')
   return result
 }
 
 function parse(expression, mode) {
-  if (!expression || expression.length > MAX_LENGTH) throw new Error('Enter a complete expression.')
+  if (!expression || expression.length > MAX_EXPRESSION_LENGTH) throw new Error('Enter a complete expression.')
   const tokens = expression.match(/(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[()+*/-]/g) || []
   if (tokens.join('') !== expression) throw new Error('Only numbers and arithmetic operators are supported.')
   let position = 0
@@ -26,7 +39,7 @@ function parse(expression, mode) {
     const token = tokens[position++]
     if (token === '+' || token === '-') {
       const operand = primary()
-      return { type: 'unary', operator: token, operand, value: token === '-' ? -operand.value : operand.value }
+      return { type: 'unary', operator: token, operand, value: token === '-' ? operand.value.negated() : operand.value }
     }
     if (token === '(') {
       // Parentheses retain normal mathematical precedence in both modes.
@@ -37,8 +50,8 @@ function parse(expression, mode) {
     if (!token || !/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/.test(token)) {
       throw new Error('Enter a complete expression.')
     }
-    const value = Number(token)
-    if (!Number.isFinite(value)) throw new Error('Number is outside the supported range.')
+    const value = new CalculatorDecimal(token)
+    if (!inRange(value)) throw new Error('Number is outside the supported range.')
     return { type: 'number', text: token, value }
   }
 
@@ -66,7 +79,7 @@ function renderWorking(tree, mode) {
   if (tree.type === 'unary') return tree.operator + renderWorking(tree.operand, mode)
   const left = mode === 'calculator' ? formatNumber(tree.left.value) : renderWorking(tree.left, mode)
   const right = renderWorking(tree.right, mode)
-  return left + tree.operator + (tree.right.value < 0 ? '(' + right + ')' : right)
+  return left + tree.operator + (tree.right.value.lt(0) ? '(' + right + ')' : right)
 }
 
 function inspectExpression(expression, mode = 'calculator') {
@@ -85,28 +98,24 @@ function inspectExpression(expression, mode = 'calculator') {
 }
 
 function createState() {
-  return { expression: '', completed: false, answer: '0', memory: 0, hasMemory: false, message: '' }
+  return { expression: '', expressionLimit: MAX_LENGTH, completed: false, answer: '0', memory: '0', message: '' }
 }
 
 function resetExpression(state) {
   state.expression = ''
+  state.expressionLimit = MAX_LENGTH
   state.completed = false
   state.answer = '0'
 }
 
 function applyAction(state, action, mode = 'calculator') {
   state.message = ''
-  if (action === 'MR' && !state.hasMemory) {
-    state.message = 'Memory is empty.'
-    return
-  }
   if (action === 'AC') {
     resetExpression(state)
     return
   }
   if (action === 'MC') {
-    state.memory = 0
-    state.hasMemory = false
+    state.memory = '0'
     state.message = 'Memory cleared.'
     return
   }
@@ -116,27 +125,33 @@ function applyAction(state, action, mode = 'calculator') {
     return
   }
   if (action === '=' || action === 'M+' || action === 'M-') {
-    if (!state.expression) return
-    const inspection = inspectExpression(state.expression, mode)
+    if (!state.expression && action === '=') return
+    const inspection = state.completed ? { result: state.answer, error: '' }
+      : state.expression ? inspectExpression(state.expression, mode) : { result: '0', error: '' }
     if (inspection.error) {
       state.message = inspection.error
       return
     }
-    if (action === '=') {
-      state.answer = inspection.result
-      state.completed = true
-    } else {
+    if (action !== '=') {
       try {
-        state.memory = Number(formatNumber(calculate(action === 'M+' ? '+' : '-', state.memory, Number(inspection.result))))
-        state.hasMemory = true
+        state.memory = formatNumber(calculate(action === 'M+' ? '+' : '-',
+          new CalculatorDecimal(state.memory), new CalculatorDecimal(inspection.result)))
         state.message = action === 'M+' ? 'Added to memory.' : 'Subtracted from memory.'
-      } catch (error) { state.message = error.message }
+      } catch (error) {
+        state.message = error.message
+        return
+      }
     }
+    state.answer = inspection.result
+    state.completed = true
+    if (!state.expression) state.expression = '0'
     return
   }
   if (state.completed) {
     if (OPERATORS.includes(action)) {
       state.expression = state.answer
+      // Give continued input its own budget, even after a long quotient.
+      state.expressionLimit = state.answer.length + MAX_LENGTH
       state.completed = false
     } else if (/^(?:\d|00|\.|\(|MR)$/.test(action)) {
       resetExpression(state)
@@ -150,7 +165,9 @@ function applyAction(state, action, mode = 'calculator') {
 
   if (action === 'MR') {
     const value = formatNumber(state.memory)
-    next += (needsOperand ? '' : '*') + (state.memory < 0 ? '(' + value + ')' : value)
+    next += (needsOperand ? '' : '*') + (value.startsWith('-') ? '(' + value + ')' : value)
+    // Recalling a generated result must also work when it exceeds the key limit.
+    if (next.length > state.expressionLimit) state.expressionLimit = next.length + MAX_LENGTH
     state.message = 'Memory recalled.'
   } else if (/^(?:\d|00)$/.test(action)) {
     if (last === ')') next += '*'
@@ -184,7 +201,8 @@ function applyAction(state, action, mode = 'calculator') {
     next += ')'
   } else return
 
-  if (next.length > MAX_LENGTH) state.message = 'Expression limit reached (512 characters).'
+  const limit = Math.min(state.expressionLimit, MAX_EXPRESSION_LENGTH)
+  if (next.length > limit) state.message = 'Expression limit reached (' + limit + ' characters).'
   else state.expression = next
 }
 
