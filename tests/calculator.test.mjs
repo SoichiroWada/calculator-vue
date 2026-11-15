@@ -2,6 +2,27 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { applyAction, createState, inspectExpression } from '../src/calculator/engine.mjs'
 import { createKeyboardController } from '../src/calculator/keyboard.mjs'
+import { formatDisplay } from '../src/calculator/display.mjs'
+
+test('display groups integer parts of expression tokens with apostrophes', () => {
+  assert.equal(formatDisplay('123456789'), "123'456'789")
+  assert.equal(formatDisplay('-1234567.890123+(.75*10000)-9876.'), "-1'234'567.890123+(.75*10'000)-9'876.")
+  assert.equal(formatDisplay('123+456='), '123+456=')
+  assert.equal(formatDisplay(''), '')
+})
+
+test('display preserves scientific notation and does not group fractional or exponent digits', () => {
+  assert.equal(formatDisplay('1.23456789e+100'), '1.23456789e+100')
+  assert.equal(formatDisplay('12345e-100+12345E+100'), "12'345e-100+12'345E+100")
+  assert.equal(formatDisplay('0.000000123456'), '0.000000123456')
+})
+
+test('separator preference switches formatting without changing the original expression', () => {
+  const expression = '-1234567.890123+10000e-12'
+  assert.equal(formatDisplay(expression, false), expression)
+  assert.equal(formatDisplay(expression, true), "-1'234'567.890123+10'000e-12")
+  assert.equal(formatDisplay(expression, false), expression)
+})
 
 function enter(actions, mode = 'calculator', state = createState()) {
   for (const action of actions) applyAction(state, action, mode)
@@ -91,7 +112,7 @@ test('every requested physical key maps to the matching virtual key', () => {
     ...'0123456789+-*/.'.split('').map(key => [key, key]),
     ['ArrowLeft', '('], ['ArrowRight', ')'], ['Enter', '='], [' ', 'AC'],
     ['Backspace', 'BS'], ['Delete', 'BS'], ['End', 'MR'],
-    ['PageDown', 'M-'], ['PageUp', 'M+'], ['Home', 'MC']
+    ['PageDown', 'M-'], ['PageUp', 'M+'], ['Home', 'MC'], ['s', 'SEP'], ['S', 'SEP']
   ]
   for (const [key, action] of assignments) {
     const input = event(key)
@@ -139,4 +160,17 @@ test('keyboard works after buttons and radios gain focus without double activati
   controller.keydown(event('1', { repeat: true }))
   controller.keydown(event('Backspace', { repeat: true }))
   assert.deepEqual(actions, ['=', 'AC', 'BS'])
+})
+
+test('separator shortcut ignores repeats, modifier shortcuts, composition, and editable inputs', () => {
+  const { actions, controller, event } = keyboardFixture()
+  controller.keydown(event('s', { repeat: true }))
+  for (const options of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true }, { target: { tagName: 'INPUT', type: 'text' } }]) {
+    const key = event('s', options)
+    controller.keydown(key)
+    assert.equal(key.prevented, undefined)
+  }
+  assert.deepEqual(actions, [])
+  controller.keydown(event('s', { target: { tagName: 'BUTTON' } }))
+  assert.deepEqual(actions, ['SEP'])
 })

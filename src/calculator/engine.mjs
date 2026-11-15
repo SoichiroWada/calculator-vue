@@ -78,7 +78,7 @@ function inspectExpression(expression, mode = 'calculator') {
     if (expression && OPERATORS.includes(expression.slice(-1))) {
       try {
         working = renderWorking(parse(expression.slice(0, -1), mode), mode) + expression.slice(-1)
-      } catch (ignored) { /* An open parenthesis or unary sign is still being entered. */ }
+      } catch { /* An open parenthesis or unary sign is still being entered. */ }
     }
     return { result: '', working, error: error.message }
   }
