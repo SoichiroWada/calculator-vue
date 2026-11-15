@@ -2,20 +2,21 @@
   <main class="calculator-page">
     <h1 class="sr-only">Calculator</h1>
     <section class="calculator" aria-label="Calculator">
-      <div class="screen" aria-label="Three-line calculation display">
+      <div class="screen" aria-label="Calculation display with status, input, working expression, and result">
         <div class="screen-status">
           <span v-if="state.hasMemory" class="memory-status">{{ 'MEMORY : ' + memoryDisplay }}</span>
           <span class="message" role="status">{{ state.message }}</span>
         </div>
         <div ref="history" id="output2" class="display-line history" aria-label="Expression history">{{ history }}</div>
-        <div ref="working" id="output1" class="display-line working" aria-label="Working expression">{{ working }}</div>
-        <output ref="result" id="output5" class="display-line result" aria-label="Result" aria-live="polite" aria-atomic="true">{{ result }}</output>
+        <div ref="working" id="output1" class="display-line working" :aria-label="'Working expression: ' + formattedWorking" tabindex="0">{{ formattedWorking }}</div>
+        <output ref="result" id="output5" class="display-line result" :aria-label="'Result: ' + formattedResult" aria-live="polite" aria-atomic="true" tabindex="0">{{ formattedResult }}</output>
       </div>
 
       <div class="key-deck">
         <div class="utility-panel">
           <div class="memory-keys" aria-label="Memory and editing controls">
             <calculator-key v-for="key in memoryKeys" :key="key.label" :key-info="key" @press="press" />
+            <calculator-key class="separator-toggle" :key-info="separatorKey" :aria-pressed="showSeparators" @press="press" />
           </div>
           <fieldset class="mode-control" aria-describedby="mode-help">
             <legend>{{ mode === 'calculator' ? 'CALCULATOR MODE' : 'MATHEMATICS MODE' }}</legend>
@@ -38,6 +39,7 @@
 
 <script>
 import CalculatorKey from './CalculatorKey.vue'
+import { formatDisplay } from '../calculator/display.mjs'
 import { applyAction, createState, formatNumber, inspectExpression } from '../calculator/engine.mjs'
 import { createKeyboardController } from '../calculator/keyboard.mjs'
 
@@ -61,10 +63,10 @@ const numberKeys = ['7', '8', '9', '(', ')', '4', '5', '6', '*', '/', '1', '2', 
 })
 
 export default {
-  name: 'Calculator',
+  name: 'CalculatorPage',
   components: { CalculatorKey },
   data() {
-    return { state: createState(), memoryKeys, numberKeys }
+    return { state: createState(), memoryKeys, numberKeys, showSeparators: true }
   },
   computed: {
     mode() { return this.$route.name === 'Mathematics' ? 'mathematics' : 'calculator' },
@@ -72,7 +74,12 @@ export default {
     history() { return this.state.expression + (this.state.completed ? '=' : '') },
     working() { return this.state.completed ? this.state.answer : this.inspection.working },
     result() { return this.state.completed ? this.state.answer : this.inspection.result || (this.state.expression ? '' : '0') },
-    memoryDisplay() { return formatNumber(this.state.memory) }
+    formattedWorking() { return formatDisplay(this.working, this.showSeparators) },
+    formattedResult() { return formatDisplay(this.result, this.showSeparators) },
+    memoryDisplay() { return formatDisplay(formatNumber(this.state.memory), this.showSeparators) },
+    separatorKey() {
+      return { label: 'SEP', shortcut: 'S', tooltipAlign: 'right', description: 'Toggle thousands separators (currently ' + (this.showSeparators ? 'on' : 'off') + ')' }
+    }
   },
   watch: {
     mode() {
@@ -94,13 +101,16 @@ export default {
       if (element) element.scrollLeft = element.scrollWidth
     })
   },
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('keydown', this.keyboard.keydown)
     window.removeEventListener('keyup', this.keyboard.keyup)
     window.removeEventListener('blur', this.keyboard.blur)
   },
   methods: {
-    press(action) { applyAction(this.state, action, this.mode) },
+    press(action) {
+      if (action === 'SEP') this.showSeparators = !this.showSeparators
+      else applyAction(this.state, action, this.mode)
+    },
     setMode(mode) {
       if (mode !== this.mode) this.$router.push({ name: mode === 'calculator' ? 'Calculator' : 'Mathematics' })
     },
@@ -118,13 +128,15 @@ export default {
 .display-line { display: block; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #3e6862 #101010; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1.5; }
 .screen-status, .history { font-size: 22px; line-height: 1.5; }
 .history { min-height: 36px; }
-.working, .result { font-size: 44px; line-height: 1.5; }
-.working, .result { min-height: 66px; }
+.working, .result { font-size: 48px; line-height: 1.5; min-height: 1.5em; }
+.working:focus-visible, .result:focus-visible { outline: 1px solid #73e3d4; outline-offset: 2px; }
 .result { margin-top: 4px; }
 .key-deck { background: #868282; display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; padding: 32px 34px 28px 38px; }
 .utility-panel { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-width: 0; }
 .memory-keys, .number-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .memory-keys { gap: 10px; }
+.separator-toggle { grid-column: 5; grid-row: 2; }
+.separator-toggle[aria-pressed="true"] { box-shadow: inset 0 -3px #72d6c7; }
 .number-keys { grid-template-rows: repeat(4, minmax(0, 1fr)); }
 .mode-control { align-self: flex-start; margin: 0 0 6px 6px; padding: 18px 22px 10px; background: #000; border: 0; color: #fff; font-size: 14px; text-align: center; }
 .mode-control legend { float: left; width: 100%; margin-bottom: 8px; padding: 0; }
@@ -140,8 +152,7 @@ export default {
   .screen-status { min-height: 22px; }
   .screen-status, .history { font-size: 18px; }
   .history { min-height: 27px; }
-  .working, .result { font-size: 32px; }
-  .working, .result { min-height: 48px; }
+  .working, .result { font-size: 36px; }
   .key-deck { padding: 20px; gap: 28px; }
   .memory-keys, .number-keys { gap: 8px; }
   .mode-control { margin: 0; padding: 12px 10px 6px; font-size: 12px; }
@@ -154,8 +165,7 @@ export default {
   .screen-status { min-height: 14px; }
   .screen-status, .history { font-size: 14px; }
   .history { min-height: 20px; }
-  .working, .result { font-size: 23px; line-height: 1.3; }
-  .working, .result { min-height: 30px; }
+  .working, .result { font-size: 25px; }
   .result { margin-top: 0; }
   .key-deck { padding: 10px 20px; gap: 34px; }
   .memory-keys, .number-keys { gap: 5px; }
@@ -171,8 +181,7 @@ export default {
   .screen-status { min-height: 12px; }
   .screen-status, .history { font-size: 12px; }
   .history { min-height: 18px; }
-  .working, .result { font-size: 21px; line-height: 1.2; }
-  .working, .result { min-height: 26px; }
+  .working, .result { font-size: 23px; }
   .keyboard-hint { display: none; }
 }
 @media (max-width: 540px) and (orientation: portrait) {

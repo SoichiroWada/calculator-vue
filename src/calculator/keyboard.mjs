@@ -1,7 +1,8 @@
 const KEY_ACTIONS = {
   ArrowLeft: '(', ArrowRight: ')', Enter: '=', '=': '=',
   ' ': 'AC', Spacebar: 'AC', Backspace: 'BS', Delete: 'BS',
-  End: 'MR', PageDown: 'M-', PageUp: 'M+', Home: 'MC'
+  End: 'MR', PageDown: 'M-', PageUp: 'M+', Home: 'MC',
+  s: 'SEP', S: 'SEP'
 }
 
 // Ctrl and Alt act on release so shortcuts such as Ctrl+C do not enter 00.

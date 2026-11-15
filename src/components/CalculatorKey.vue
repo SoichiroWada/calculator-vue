@@ -2,7 +2,7 @@
   <button
     type="button"
     class="calculator-key"
-    :class="{ danger: keyInfo.danger }"
+    :class="{ danger: keyInfo.danger, 'tooltip-right': keyInfo.tooltipAlign === 'right' }"
     :data-key="keyInfo.label"
     :aria-label="keyInfo.label + ': ' + keyInfo.description"
     :aria-keyshortcuts="keyInfo.ariaShortcut || keyInfo.shortcut"
@@ -20,6 +20,7 @@
 <script>
 export default {
   name: 'CalculatorKey',
+  emits: ['press'],
   props: { keyInfo: { type: Object, required: true } },
   computed: {
     tooltipId() { return 'key-tip-' + this.keyInfo.label.split('').map(char => char.charCodeAt(0)).join('-') }
@@ -39,6 +40,7 @@ export default {
 .calculator-key:hover .key-tooltip, .calculator-key:focus-visible .key-tooltip { visibility: visible; opacity: 1; }
 .calculator-key:nth-child(5n) .key-tooltip { left: auto; right: 0; transform: none; }
 .calculator-key:nth-child(5n + 1) .key-tooltip { left: 0; transform: none; }
+.calculator-key.tooltip-right .key-tooltip { left: auto; right: 0; transform: none; }
 @media (max-width: 800px) {
   .calculator-key { min-height: 48px; font-size: 22px; border-width: 2px; padding: 7px 1px; }
 }

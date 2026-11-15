@@ -4,22 +4,24 @@ A Vue calculator designed for desktop and landscape phones, styled after `calcul
 
 ## Develop and verify
 
-Use Node.js 18 or later (verified with Node.js 24).
+Use Node.js 24 or later (`nvm use` selects Node.js 24). This project uses Vue 3, Vue Router 5, Vite 8, and ESLint 10, with stable dependency versions recorded in `package-lock.json`.
 
 ```sh
-npm install
+npm ci
 npm run serve
 npm test
 npm run lint -- --no-fix
 npm run build
 ```
 
-The CLI wrapper enables the legacy OpenSSL provider needed by this project's Vue CLI 3 / webpack 4 toolchain on modern Node.js. It runs the CLI asynchronously and forwards its exit status so CI can continue after a build or stop on failure. No dependency upgrade is required for these changes.
+`npm run dev` is an alias for `npm run serve`. Both start the Vite development server. `npm run preview` serves a production build locally after building it. Lint checks files without modifying them; use `npm run lint -- --fix` to apply automatic fixes.
+
+The Vue 3 migration replaces Vue CLI, webpack, Babel, and the legacy OpenSSL wrapper with Vite. The HTML entry point is now `index.html` in the project root; static assets remain in `public`. The unused Lodash dependency has been removed. Builds target modern browsers using Vite's default browser target; Internet Explorer is not supported. See the [Vue tooling guide](https://vuejs.org/guide/scaling-up/tooling.html) and [Vite browser compatibility](https://vite.dev/guide/build.html#browser-compatibility).
 
 Production files are generated in `dist`. If an existing `dist` belongs to another user, build into a writable location instead:
 
 ```sh
-npm run build -- --dest /tmp/calculator-build
+npm run build -- --outDir /tmp/calculator-build
 ```
 
 ## Display and calculation modes
@@ -31,6 +33,10 @@ The three horizontal display rows show:
 3. **Live result** — the result of a complete expression; Enter finalizes it.
 
 For example, `(12+89-88)*56` displays `(12+89-88)*56`, `13*56`, and `728`.
+
+Below the status/message row and input history, the working expression and live result use the original interface font at 48px on desktop, with smaller sizes on phones. Tabular numerals keep digits equally spaced where the font supports them. Numbers align on the right, and long expressions scroll horizontally with the most recent input brought into view.
+
+The blue **SEP** button directly below **BS**, or the **S** key, toggles apostrophe thousands separators (`123'456'789`). Separators start enabled; the button's underline indicates they are on. This preference applies to the working expression (Line 3), the result (Line 4), and memory, and is retained when switching modes or clearing a calculation. Input history (Line 2) always shows the original input without thousands separators. Calculation and editing use the original unformatted values.
 
 **Calculator mode** evaluates operations sequentially: `2+3*4` gives `20`. **Mathematics mode** uses operator precedence and gives `14`. Parentheses use normal mathematical precedence in both modes and support nesting. Select a mode or tap Alt to switch; the expression and memory are retained. The existing `/#/` and `/#/mathematics` routes remain supported.
 
@@ -52,6 +58,7 @@ Keyboard input works as soon as the page has focus, including after clicking cal
 | = | Enter or = |
 | AC | Space bar |
 | BS | Backspace or Delete |
+| SEP (thousands separators on/off) | S |
 | MR | End |
 | M− | PageDown |
 | M+ | PageUp |
