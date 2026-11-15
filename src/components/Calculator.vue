@@ -4,18 +4,27 @@
     <section class="calculator" aria-label="Calculator">
       <div class="screen" aria-label="Calculation display with status, input, working expression, and result">
         <div class="screen-status">
-          <span v-if="state.hasMemory" class="memory-status">{{ 'MEMORY : ' + memoryDisplay }}</span>
-          <span class="message" role="status">{{ state.message }}</span>
+          <div class="screen-status-content">
+            <span v-if="state.memory !== '0'" class="memory-status">{{ 'MEMORY : ' + memoryDisplay }}</span>
+            <span class="message" role="status">{{ state.message }}</span>
+          </div>
         </div>
         <div ref="history" id="output2" class="display-line history" aria-label="Expression history">{{ history }}</div>
         <div ref="working" id="output1" class="display-line working" :aria-label="'Working expression: ' + formattedWorking" tabindex="0">{{ formattedWorking }}</div>
-        <output ref="result" id="output5" class="display-line result" :aria-label="'Result: ' + formattedResult" aria-live="polite" aria-atomic="true" tabindex="0">{{ formattedResult }}</output>
+        <output ref="result" id="output5" class="display-line result" :aria-label="'Quick view: ' + formattedResult" aria-live="polite" aria-atomic="true" tabindex="0">{{ formattedResult }}</output>
       </div>
 
       <div class="key-deck">
         <div class="utility-panel">
           <div class="memory-keys" aria-label="Memory and editing controls">
             <calculator-key v-for="key in memoryKeys" :key="key.label" :key-info="key" @press="press" />
+            <label class="precision-control" title="Significant digits in the working expression and quick view">
+              <span>Digits</span>
+              <select v-model="displayDigits" aria-label="Digits">
+                <option value="full">Full</option>
+                <option v-for="digits in [10, 16, 20, 30]" :key="digits" :value="digits">{{ digits }}</option>
+              </select>
+            </label>
             <calculator-key class="separator-toggle" :key-info="separatorKey" :aria-pressed="showSeparators" @press="press" />
           </div>
           <fieldset class="mode-control" aria-describedby="mode-help">
@@ -39,7 +48,7 @@
 
 <script>
 import CalculatorKey from './CalculatorKey.vue'
-import { formatDisplay } from '../calculator/display.mjs'
+import { formatDisplay, formatHistory, formatDigits } from '../calculator/display.mjs'
 import { applyAction, createState, formatNumber, inspectExpression } from '../calculator/engine.mjs'
 import { createKeyboardController } from '../calculator/keyboard.mjs'
 
@@ -66,16 +75,16 @@ export default {
   name: 'CalculatorPage',
   components: { CalculatorKey },
   data() {
-    return { state: createState(), memoryKeys, numberKeys, showSeparators: true }
+    return { state: createState(), memoryKeys, numberKeys, showSeparators: true, displayDigits: 16 }
   },
   computed: {
     mode() { return this.$route.name === 'Mathematics' ? 'mathematics' : 'calculator' },
     inspection() { return inspectExpression(this.state.expression, this.mode) },
-    history() { return this.state.expression + (this.state.completed ? '=' : '') },
+    history() { return formatHistory(this.state.expression, this.mode) + (this.state.completed ? '=' : '') },
     working() { return this.state.completed ? this.state.answer : this.inspection.working },
     result() { return this.state.completed ? this.state.answer : this.inspection.result || (this.state.expression ? '' : '0') },
-    formattedWorking() { return formatDisplay(this.working, this.showSeparators) },
-    formattedResult() { return formatDisplay(this.result, this.showSeparators) },
+    formattedWorking() { return formatDigits(this.working, this.displayDigits, this.showSeparators) },
+    formattedResult() { return formatDigits(this.result, this.displayDigits, this.showSeparators) },
     memoryDisplay() { return formatDisplay(formatNumber(this.state.memory), this.showSeparators) },
     separatorKey() {
       return { label: 'SEP', shortcut: 'S', tooltipAlign: 'right', description: 'Toggle thousands separators (currently ' + (this.showSeparators ? 'on' : 'off') + ')' }
@@ -83,7 +92,7 @@ export default {
   },
   watch: {
     mode() {
-      this.state.completed = false
+      Object.assign(this.state, createState())
       this.state.message = this.mode === 'calculator' ? 'Sequential calculation.' : 'Mathematical operator precedence.'
     }
   },
@@ -124,7 +133,10 @@ export default {
 .calculator-page { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 36px 24px; }
 .calculator { width: min(100%, 1030px); }
 .screen { background: #101010; color: #72d6c7; padding: 22px 30px 10px; margin-bottom: 36px; }
-.screen-status { min-height: 30px; display: flex; flex-direction: column; text-align: center; overflow-wrap: anywhere; }
+.screen-status { height: 1.5em; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; white-space: nowrap; }
+.screen-status-content { display: flex; align-items: center; justify-content: center; gap: 0.75em; width: max-content; min-width: 100%; height: 100%; }
+.screen-status-content > span { flex: none; }
+.message:empty { display: none; }
 .display-line { display: block; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #3e6862 #101010; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; line-height: 1.5; }
 .screen-status, .history { font-size: 22px; line-height: 1.5; }
 .history { min-height: 36px; }
@@ -135,6 +147,10 @@ export default {
 .utility-panel { display: flex; flex-direction: column; justify-content: space-between; gap: 28px; min-width: 0; }
 .memory-keys, .number-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .memory-keys { gap: 10px; }
+.precision-control { grid-column: 1 / span 4; grid-row: 2; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-right: 6px; min-width: 0; color: #fff; font-size: 18px; }
+.precision-control select { min-width: 90px; max-width: 100%; min-height: 44px; padding: 8px 10px; border: 2px outset #c9cecd; border-radius: 0; background: #003a6d; color: #fff; font: inherit; cursor: pointer; }
+.precision-control select:hover { background: #084b80; }
+.precision-control select:focus-visible { outline: 2px solid #72d6c7; outline-offset: 3px; }
 .separator-toggle { grid-column: 5; grid-row: 2; }
 .separator-toggle[aria-pressed="true"] { box-shadow: inset 0 -3px #72d6c7; }
 .number-keys { grid-template-rows: repeat(4, minmax(0, 1fr)); }
@@ -149,7 +165,6 @@ export default {
 @media (max-width: 800px) {
   .calculator-page { padding: 18px 20px; }
   .screen { padding: 10px 18px 8px; margin-bottom: 20px; }
-  .screen-status { min-height: 22px; }
   .screen-status, .history { font-size: 18px; }
   .history { min-height: 27px; }
   .working, .result { font-size: 36px; }
@@ -162,9 +177,8 @@ export default {
   .calculator-page { padding: 6px 18px; }
   .calculator { max-width: 900px; }
   .screen { padding: 2px 18px; margin-bottom: 10px; }
-  .screen-status { min-height: 14px; }
   .screen-status, .history { font-size: 14px; }
-  .history { min-height: 20px; }
+  .history { min-height: 1.5em; }
   .working, .result { font-size: 25px; }
   .result { margin-top: 0; }
   .key-deck { padding: 10px 20px; gap: 34px; }
@@ -178,7 +192,6 @@ export default {
 }
 @media (orientation: landscape) and (max-height: 340px) {
   .screen { margin-bottom: 8px; }
-  .screen-status { min-height: 12px; }
   .screen-status, .history { font-size: 12px; }
   .history { min-height: 18px; }
   .working, .result { font-size: 23px; }
