@@ -41,6 +41,9 @@ export default {
 .calculator-key:nth-child(5n) .key-tooltip { left: auto; right: 0; transform: none; }
 .calculator-key:nth-child(5n + 1) .key-tooltip { left: 0; transform: none; }
 .calculator-key.tooltip-right .key-tooltip { left: auto; right: 0; transform: none; }
+@media (hover: none) and (pointer: coarse) {
+  .key-tooltip { display: none; }
+}
 @media (max-width: 800px) {
   .calculator-key { min-height: 48px; font-size: 22px; border-width: 2px; padding: 7px 1px; }
 }
